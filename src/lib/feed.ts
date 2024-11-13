@@ -30,11 +30,19 @@ export function parseCursor(cursor: string | undefined) {
 
 export type ParsedCursor = ReturnType<typeof parseCursor>;
 
-export async function getTopLinks(limit: number, cursor: ParsedCursor) {
-  const toTopOfHour = 0; //new Date().getMinutes();
-  const defaultStart = `'now', '-${toTopOfHour} minutes'`;
-  const startTime = cursor.startTime ? `'${cursor.startTime}'` : defaultStart;
-  const minTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime}, '-1 day')`;
+export interface RankLinksOptions {
+  limit: number;
+  cursor: ParsedCursor;
+  range?: string;
+}
+
+export async function rankLinks({
+  limit,
+  cursor,
+  range = "1 day",
+}: RankLinksOptions) {
+  const startTime = cursor.startTime ? `'${cursor.startTime}'` : `'now'`;
+  const minTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime}, '-${range}')`;
   const maxTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime})`;
 
   const posts = db
@@ -97,7 +105,7 @@ export async function getTopLinks(limit: number, cursor: ParsedCursor) {
   items = items.slice(0, limit);
 
   const defaultStartTime = db
-    .prepare(`SELECT STRFTIME('%Y-%m-%d %H:%M:%S', ${defaultStart}) AS value;`)
+    .prepare(`SELECT STRFTIME('%Y-%m-%d %H:%M:%S', 'now') AS value;`)
     .get() as { value: string };
   const newStartTime = cursor.startTime || defaultStartTime.value;
 
@@ -105,4 +113,8 @@ export async function getTopLinks(limit: number, cursor: ParsedCursor) {
     items: Object.fromEntries(items),
     cursor: `${newStartTime}/${items[items.length - 1]![0]}`,
   };
+}
+
+export async function trendingLinks(options: Omit<RankLinksOptions, "range">) {
+  return rankLinks({ ...options, range: "1 day" });
 }
