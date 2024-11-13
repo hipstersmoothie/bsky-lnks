@@ -52,7 +52,7 @@ export interface Reaction {
 
 function parseUri(uri: string) {
   const [, did, rkey] =
-    uri.match(/^at:\/\/([^\/]+)\/app.bsky.feed.post\/([^\/]+)/) || [];
+    uri.match(/^at:\/\/([^/]+)\/app.bsky.feed.post\/([^/]+)/) || [];
   return { did, rkey };
 }
 
