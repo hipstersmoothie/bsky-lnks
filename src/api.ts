@@ -44,7 +44,7 @@ server.route({
   handler: async (req, res) => {
     const { feed, cursor } = req.query as Record<string, string | undefined>;
 
-    console.log("GOT", { feed });
+    console.log("GOT", req.query);
 
     switch (feed) {
       case `at://${DID}/app.bsky.feed.generator/trending-links`: {
