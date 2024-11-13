@@ -17,7 +17,7 @@ server.route({
       service: [
         {
           id: "#bsky_fg",
-          serviceEndpoint: "TODO",
+          serviceEndpoint: "https://bsky-lnks-production.up.railway.app",
           type: "BskyFeedGenerator",
         },
       ],
