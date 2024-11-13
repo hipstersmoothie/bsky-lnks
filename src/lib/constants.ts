@@ -1,6 +1,7 @@
 export const bannedHosts = [
   "mesonet.agron.iastate.edu",
   "gofund.com",
+  "gofundme.com",
   "discord.gg",
   "t.me",
   "web.archive.org",
