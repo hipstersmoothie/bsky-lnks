@@ -15,6 +15,7 @@
     "@atproto/identity": "^0.4.3",
     "@atproto/xrpc-server": "^0.7.2",
     "@skyware/jetstream": "^0.2.0",
+    "cron": "^3.2.1",
     "dotenv": "^16.4.5",
     "fastify": "^5.1.0",
     "libsql": "^0.4.7",
