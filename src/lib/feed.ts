@@ -115,6 +115,23 @@ export async function rankLinks({
   };
 }
 
+export function constructFeed(
+  items: Awaited<ReturnType<typeof rankLinks>>["items"]
+) {
+  return Object.values(items).map((item) => {
+    const post = item[0]!;
+    return {
+      post: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
+    };
+  });
+}
+
 export async function trendingLinks(options: Omit<RankLinksOptions, "range">) {
   return rankLinks({ ...options, range: "1 day" });
+}
+
+export async function trendingLinksHourly(
+  options: Omit<RankLinksOptions, "range">
+) {
+  return rankLinks({ ...options, range: "1 hour" });
 }

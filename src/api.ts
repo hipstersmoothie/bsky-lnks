@@ -1,5 +1,10 @@
 import Fastify from "fastify";
-import { parseCursor, trendingLinks } from "./lib/feed.js";
+import {
+  constructFeed,
+  parseCursor,
+  trendingLinks,
+  trendingLinksHourly,
+} from "./lib/feed.js";
 import { DID, HOST } from "./lib/constants.js";
 
 const server = Fastify({
@@ -32,7 +37,10 @@ server.route({
   handler: async (_, res) => {
     res.send({
       did: DID,
-      feeds: [{ uri: `at://${DID}/app.bsky.feed.generator/trending-links` }],
+      feeds: [
+        { uri: `at://${DID}/app.bsky.feed.generator/trending-links` },
+        { uri: `at://${DID}/app.bsky.feed.generator/trend-links-24` },
+      ],
     });
   },
 });
@@ -58,14 +66,17 @@ server.route({
           limit,
           cursor,
         });
-        const feed = Object.values(items).map((item) => {
-          const post = item[0]!;
-          return {
-            post: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
-          };
+
+        res.send({ feed: constructFeed(items), cursor: newCursor });
+        return;
+      }
+      case `at://${DID}/app.bsky.feed.generator/trend-links-24`: {
+        const { items, cursor: newCursor } = await trendingLinksHourly({
+          limit,
+          cursor,
         });
 
-        res.send({ feed, cursor: newCursor });
+        res.send({ feed: constructFeed(items), cursor: newCursor });
         return;
       }
       default: {
