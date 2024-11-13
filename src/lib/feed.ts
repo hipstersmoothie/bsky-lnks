@@ -14,11 +14,13 @@ function sumPostScore(posts: PostWithData[]) {
 }
 
 export async function getTopLinks() {
+  const toTopOfHour = new Date().getMinutes();
   const posts = db
     .prepare(
       `
         SELECT * FROM post
-        WHERE createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-1 day');
+        WHERE createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes', '-1 day')
+          AND createdAt < STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes');
       `
     )
     .all() as Post[];
