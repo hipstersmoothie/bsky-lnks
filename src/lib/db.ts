@@ -2,6 +2,9 @@ import Database from "libsql";
 
 export const db = new Database(process.env.DB_URL || "./local.db");
 
+// Allows the other process to read from the database while we're writing to it
+db.exec("PRAGMA journal_mode = WAL;");
+
 db.prepare(
   `CREATE TABLE IF NOT EXISTS post (
     did TEXT NOT NULL, 

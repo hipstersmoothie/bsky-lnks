@@ -5,9 +5,6 @@ import WebSocket from "ws";
 import { db, incrementField } from "./lib/db.js";
 import { bannedHosts } from "./lib/constants.js";
 
-// Allows the other process to read from the database while we're writing to it
-db.exec("PRAGMA journal_mode = WAL;");
-
 const jetstream = new Jetstream({
   ws: WebSocket,
   wantedCollections: [
