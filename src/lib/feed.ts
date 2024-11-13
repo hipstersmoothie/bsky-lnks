@@ -13,16 +13,39 @@ function sumPostScore(posts: PostWithData[]) {
   return posts.reduce((acc, post) => acc + getPostScore(post), 0);
 }
 
+interface PostWithData extends Post {
+  likes: number;
+  reposts: number;
+  comments: number;
+}
+
 export async function getTopLinks() {
-  const toTopOfHour = new Date().getMinutes();
+  const toTopOfHour = 0; //new Date().getMinutes();
   const posts = db
     .prepare(
       `
-        SELECT * FROM post
-        WHERE createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes', '-1 day')
+        SELECT 
+            post.did,
+            post.rkey,
+            post.url,
+            post.createdAt,
+            COUNT(CASE WHEN reaction.type = 'like' THEN 1 END) AS likes,
+            COUNT(CASE WHEN reaction.type = 'repost' THEN 1 END) AS reposts,
+            COUNT(CASE WHEN reaction.type = 'comment' THEN 1 END) AS comments
+        FROM 
+            post
+            LEFT JOIN reaction ON post.rkey = reaction.rkey AND post.did = reaction.did
+        WHERE
+            post.createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes', '-1 day')
+            AND post.createdAt <= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes')
+            AND (reaction.createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes', '-1 day') 
+                AND post.createdAt <= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes')
+                    OR reaction.createdAt IS NULL)
+        GROUP BY
+            post.did, post.rkey, post.url, post.createdAt;
       `
     )
-    .all() as Post[];
+    .all() as PostWithData[];
 
   const top: Record<string, PostWithData[]> = {};
 

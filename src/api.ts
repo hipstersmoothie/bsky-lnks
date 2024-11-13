@@ -42,21 +42,28 @@ server.route({
   method: "GET",
   url: "/xrpc/app.bsky.feed.getFeedSkeleton",
   handler: async (req, res) => {
-    const { feed, cursor } = req.query as Record<string, string | undefined>;
+    const query = req.query as {
+      feed: string;
+      cursor?: string;
+      limit: string;
+    };
+    const limit = parseInt(query.limit);
 
-    console.log("GOT", req.query);
+    console.log("\nGOT", req.query, "\n");
 
-    switch (feed) {
+    switch (query.feed) {
       case `at://${DID}/app.bsky.feed.generator/trending-links`: {
         const top = await getTopLinks();
         const feed = Object.values(top)
-          .slice(0, 1000)
+          .slice(0, limit)
           .map((posts) => {
             const post = posts[0]!;
             return {
               post: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
             };
           });
+
+        // TODO: cursor
 
         res.send({ feed });
         return;

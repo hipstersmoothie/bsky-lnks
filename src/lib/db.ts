@@ -11,9 +11,6 @@ db.prepare(
     rkey TEXT NOT NULL, 
     url TEXT NOT NULL, 
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    likes INTEGER DEFAULT 0,
-    reposts INTEGER DEFAULT 0,
-    comments INTEGER DEFAULT 0,
     PRIMARY KEY (did, rkey, url)
   )`
 ).run();
@@ -22,9 +19,34 @@ export interface Post {
   did: string;
   rkey: string;
   url: string;
-  likes: number;
-  reposts: number;
-  comments: number;
+  createdAt: Date;
+}
+
+export function addPost(data: Omit<Post, "createdAt">) {
+  const result = db
+    .prepare(`INSERT OR REPLACE INTO post (did, rkey, url) VALUES (?, ?, ?)`)
+    .run(data.did, data.rkey, data.url);
+
+  console.log("ADD POST", result);
+}
+
+db.prepare(
+  `CREATE TABLE IF NOT EXISTS reaction (
+    id TEXT NOT NULL, 
+    did TEXT NOT NULL, 
+    rkey TEXT NOT NULL, 
+    type TEXT NOT NULL,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+  )`
+).run();
+
+export interface Reaction {
+  id: string;
+  did: string;
+  rkey: string;
+  type: "like" | "repost" | "comment";
+  url: string;
   createdAt: Date;
 }
 
@@ -34,29 +56,24 @@ function parseUri(uri: string) {
   return { did, rkey };
 }
 
-export function incrementField(
-  uri: string,
-  field: "likes" | "reposts" | "comments"
+export function addReaction(
+  data: Omit<Reaction, "createdAt" | "rkey" | "did">
 ) {
-  const { did, rkey } = parseUri(uri);
+  const { did, rkey } = parseUri(data.url);
+  const post = db
+    .prepare(`SELECT 1 FROM post WHERE did = ? AND rkey = ?`)
+    .get(did, rkey) as Post | undefined;
 
-  if (!did || !rkey) {
+  if (!post) {
     return;
   }
 
+  const id = `${data.id}-${data.type}-${new Date().getTime()}`;
   const result = db
     .prepare(
-      `
-        UPDATE post
-        SET ${field} = ${field} + 1
-        WHERE did = ? AND rkey = ?
-      `
+      `INSERT OR IGNORE INTO reaction (id, type, did, rkey) VALUES (?, ?, ?, ?)`
     )
-    .run(did, rkey);
+    .run(id, data.type, did, rkey);
 
-  if (result.changes === 0) {
-    return;
-  }
-
-  console.log(`Added to ${field}`, `at://${did}/app.bsky.feed.post/${rkey}`);
+  console.log("ADD REACTION", result);
 }

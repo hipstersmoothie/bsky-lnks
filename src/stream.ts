@@ -2,7 +2,7 @@ import { URL } from "url";
 import { Jetstream } from "@skyware/jetstream";
 import WebSocket from "ws";
 
-import { db, incrementField } from "./lib/db.js";
+import { addPost, addReaction } from "./lib/db.js";
 import { bannedHosts } from "./lib/constants.js";
 
 const jetstream = new Jetstream({
@@ -21,7 +21,11 @@ jetstream.onCreate("app.bsky.feed.post", async (event) => {
   }
 
   if (event.commit.record.reply) {
-    incrementField(event.commit.record.reply.root.uri, "comments");
+    addReaction({
+      id: event.did,
+      type: "comment",
+      url: event.commit.record.reply.root.uri,
+    });
     return;
   }
 
@@ -44,20 +48,28 @@ jetstream.onCreate("app.bsky.feed.post", async (event) => {
   }
 
   for (const link of links) {
-    const result = db
-      .prepare(`INSERT OR REPLACE INTO post (did, rkey, url) VALUES (?, ?, ?)`)
-      .run(event.did, event.commit.rkey, link.uri);
-
-    console.log(result);
+    addPost({
+      did: event.did,
+      rkey: event.commit.rkey,
+      url: link.uri,
+    });
   }
 });
 
 jetstream.onCreate("app.bsky.feed.like", async (event) => {
-  incrementField(event.commit.record.subject.uri, "likes");
+  addReaction({
+    id: event.did,
+    type: "like",
+    url: event.commit.record.subject.uri,
+  });
 });
 
 jetstream.onCreate("app.bsky.feed.repost", async (event) => {
-  incrementField(event.commit.record.subject.uri, "reposts");
+  addReaction({
+    id: event.did,
+    type: "repost",
+    url: event.commit.record.subject.uri,
+  });
 });
 
 jetstream.start();
