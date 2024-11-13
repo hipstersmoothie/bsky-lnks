@@ -10,7 +10,7 @@ db.prepare(
     did TEXT NOT NULL, 
     rkey TEXT NOT NULL, 
     url TEXT NOT NULL, 
-    createdAt DATETIME,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     likes INTEGER DEFAULT 0,
     reposts INTEGER DEFAULT 0,
     comments INTEGER DEFAULT 0,

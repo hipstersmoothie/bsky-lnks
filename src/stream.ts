@@ -45,15 +45,8 @@ jetstream.onCreate("app.bsky.feed.post", async (event) => {
 
   for (const link of links) {
     const result = db
-      .prepare(
-        `INSERT OR REPLACE INTO post (did, rkey, url, createdAt) VALUES (?, ?, ?, ?)`
-      )
-      .run(
-        event.did,
-        event.commit.rkey,
-        link.uri,
-        event.commit.record.createdAt
-      );
+      .prepare(`INSERT OR REPLACE INTO post (did, rkey, url) VALUES (?, ?, ?)`)
+      .run(event.did, event.commit.rkey, link.uri);
 
     console.log(result);
   }

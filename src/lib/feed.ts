@@ -19,8 +19,7 @@ export async function getTopLinks() {
     .prepare(
       `
         SELECT * FROM post
-        WHERE createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes', '-1 day')
-          AND createdAt < STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes');
+        WHERE createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S.%fZ', 'now', '-${toTopOfHour} minutes', '-1 day')
       `
     )
     .all() as Post[];

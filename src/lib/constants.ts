@@ -8,6 +8,7 @@ export const bannedHosts = [
   "all.you",
   "bsky.app",
   "go.bsky.app",
+  "onlyfans.com",
 ];
 
 export const DID = "did:plc:m2sjv3wncvsasdapla35hzwj";
