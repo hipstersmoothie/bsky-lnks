@@ -68,6 +68,6 @@ server.route({
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
 
-server.listen({ port }).then(() => {
+server.listen({ port, host: "::" }).then(() => {
   console.log(`Server listening on port ${port}`);
 });
