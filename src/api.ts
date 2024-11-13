@@ -32,7 +32,7 @@ server.route({
   handler: async (_, res) => {
     res.send({
       did: DID,
-      feeds: [{ uri: `at://${DID}/app.bsky.feed.generator/top-links` }],
+      feeds: [{ uri: `at://${DID}/app.bsky.feed.generator/trending-links` }],
     });
   },
 });
@@ -44,8 +44,10 @@ server.route({
   handler: async (req, res) => {
     const { feed, cursor } = req.query as Record<string, string | undefined>;
 
+    console.log("GOT", { feed });
+
     switch (feed) {
-      case `at://${DID}/app.bsky.feed.generator/top-links`: {
+      case `at://${DID}/app.bsky.feed.generator/trending-links`: {
         const top = await getTopLinks();
         const feed = Object.values(top)
           .slice(0, 1000)
