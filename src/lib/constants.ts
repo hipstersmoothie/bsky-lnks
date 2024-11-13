@@ -10,4 +10,5 @@ export const bannedHosts = [
   "go.bsky.app",
 ];
 
-export const DID = "did:web:norsky.snorre.io";
+export const DID = "did:plc:m2sjv3wncvsasdapla35hzwj";
+export const HOST = "bsky-lnks-production.up.railway.app";

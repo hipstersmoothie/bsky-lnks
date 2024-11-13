@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import { getTopLinks } from "./lib/feed.js";
-import { DID } from "./lib/constants.js";
+import { DID, HOST } from "./lib/constants.js";
 
 const server = Fastify({
   logger: true,
@@ -17,7 +17,7 @@ server.route({
       service: [
         {
           id: "#bsky_fg",
-          serviceEndpoint: "https://bsky-lnks-production.up.railway.app",
+          serviceEndpoint: `https://${HOST}`,
           type: "BskyFeedGenerator",
         },
       ],
@@ -32,11 +32,7 @@ server.route({
   handler: async (_, res) => {
     res.send({
       did: DID,
-      feeds: [
-        {
-          uri: `at://${DID}/app.bsky.feed.generator/top-links`,
-        },
-      ],
+      feeds: [{ uri: `at://${DID}/app.bsky.feed.generator/top-links` }],
     });
   },
 });

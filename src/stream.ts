@@ -1,5 +1,6 @@
 import { URL } from "url";
 import { Jetstream } from "@skyware/jetstream";
+import WebSocket from "ws";
 
 import { db, incrementField } from "./lib/db.js";
 import { bannedHosts } from "./lib/constants.js";
@@ -8,6 +9,7 @@ import { bannedHosts } from "./lib/constants.js";
 db.exec("PRAGMA journal_mode = WAL;");
 
 const jetstream = new Jetstream({
+  ws: WebSocket,
   wantedCollections: [
     "app.bsky.feed.post",
     "app.bsky.feed.like",
