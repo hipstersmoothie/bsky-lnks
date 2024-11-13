@@ -19,8 +19,24 @@ interface PostWithData extends Post {
   comments: number;
 }
 
-export async function getTopLinks() {
+export function parseCursor(cursor: string | undefined) {
+  if (!cursor) {
+    return { startTime: undefined, url: undefined };
+  }
+
+  const [startTime, ...url] = cursor.split("/");
+  return { startTime, url: url.join("/") };
+}
+
+export type ParsedCursor = ReturnType<typeof parseCursor>;
+
+export async function getTopLinks(limit: number, cursor: ParsedCursor) {
   const toTopOfHour = 0; //new Date().getMinutes();
+  const defaultStart = `'now', '-${toTopOfHour} minutes'`;
+  const startTime = cursor.startTime ? `'${cursor.startTime}'` : defaultStart;
+  const minTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime}, '-1 day')`;
+  const maxTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime})`;
+
   const posts = db
     .prepare(
       `
@@ -36,11 +52,9 @@ export async function getTopLinks() {
             post
             LEFT JOIN reaction ON post.rkey = reaction.rkey AND post.did = reaction.did
         WHERE
-            post.createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes', '-1 day')
-            AND post.createdAt <= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes')
-            AND (reaction.createdAt >= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes', '-1 day') 
-                AND post.createdAt <= STRFTIME('%Y-%m-%d %H:%M:%S', 'now', '-${toTopOfHour} minutes')
-                    OR reaction.createdAt IS NULL)
+            post.createdAt >= ${minTime}
+            AND post.createdAt <= ${maxTime}
+            AND (reaction.createdAt >= ${minTime} AND post.createdAt <= ${maxTime} OR reaction.createdAt IS NULL)
         GROUP BY
             post.did, post.rkey, post.url, post.createdAt;
       `
@@ -67,12 +81,28 @@ export async function getTopLinks() {
     });
   }
 
-  return Object.fromEntries(
-    Object.entries(top)
-      .sort((a, b) => sumPostScore(b[1]) - sumPostScore(a[1]))
-      .map(([url, posts]): [string, PostWithData[]] => [
-        url,
-        posts.sort((a, b) => getPostScore(b) - getPostScore(a)),
-      ])
-  );
+  let items = Object.entries(top)
+    .sort((a, b) => sumPostScore(b[1]) - sumPostScore(a[1]))
+    .map(([url, posts]): [string, PostWithData[]] => [
+      url,
+      posts.sort((a, b) => getPostScore(b) - getPostScore(a)),
+    ]);
+
+  const urlCursorIndex = items.findIndex(([url]) => url === cursor.url);
+
+  if (urlCursorIndex !== -1) {
+    items = items.slice(urlCursorIndex + 1);
+  }
+
+  items = items.slice(0, limit);
+
+  const defaultStartTime = db
+    .prepare(`SELECT STRFTIME('%Y-%m-%d %H:%M:%S', ${defaultStart}) AS value;`)
+    .get() as { value: string };
+  const newStartTime = cursor.startTime || defaultStartTime.value;
+
+  return {
+    items: Object.fromEntries(items),
+    cursor: `${newStartTime}/${items[items.length - 1]![0]}`,
+  };
 }

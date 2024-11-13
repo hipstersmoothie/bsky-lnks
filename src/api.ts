@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import { getTopLinks } from "./lib/feed.js";
+import { getTopLinks, parseCursor } from "./lib/feed.js";
 import { DID, HOST } from "./lib/constants.js";
 
 const server = Fastify({
@@ -37,6 +37,14 @@ server.route({
   },
 });
 
+function getStartOfCurrentHour() {
+  const now = new Date();
+  now.setMinutes(0);
+  now.setSeconds(0);
+  now.setMilliseconds(0);
+  return now;
+}
+
 // Construct the feed
 server.route({
   method: "GET",
@@ -48,24 +56,21 @@ server.route({
       limit: string;
     };
     const limit = parseInt(query.limit);
+    const cursor = parseCursor(query.cursor);
 
     console.log("\nGOT", req.query, "\n");
 
     switch (query.feed) {
       case `at://${DID}/app.bsky.feed.generator/trending-links`: {
-        const top = await getTopLinks();
-        const feed = Object.values(top)
-          .slice(0, limit)
-          .map((posts) => {
-            const post = posts[0]!;
-            return {
-              post: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
-            };
-          });
+        const { items, cursor: newCursor } = await getTopLinks(limit, cursor);
+        const feed = Object.values(items).map((item) => {
+          const post = item[0]!;
+          return {
+            post: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
+          };
+        });
 
-        // TODO: cursor
-
-        res.send({ feed });
+        res.send({ feed, cursor: newCursor });
         return;
       }
       default: {
