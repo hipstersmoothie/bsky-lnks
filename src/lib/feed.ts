@@ -32,13 +32,13 @@ export type ParsedCursor = ReturnType<typeof parseCursor>;
 
 export interface RankLinksOptions {
   limit: number;
-  cursor: ParsedCursor;
+  cursor?: ParsedCursor;
   range?: string;
 }
 
 export async function rankLinks({
   limit,
-  cursor,
+  cursor = { startTime: undefined, index: undefined },
   range = "1 day",
 }: RankLinksOptions) {
   const defaultStartTime = getStartTime();

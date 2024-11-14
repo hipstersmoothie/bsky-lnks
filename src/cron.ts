@@ -1,5 +1,6 @@
 import { CronJob } from "cron";
 import { db, getCurrentTime } from "./lib/db.js";
+import { trendingLinks, trendingLinksHourly } from "./lib/feed.js";
 
 // Delete old data
 CronJob.from({
@@ -59,5 +60,18 @@ CronJob.from({
     );
 
     console.log("DELETE CACHE", statement.run());
+  },
+});
+
+// Prime the cache
+CronJob.from({
+  start: true,
+  // at 10:00:01 prime the cache
+  cronTime: "1 0/10 * * * *",
+  onTick: async () => {
+    await Promise.all([
+      trendingLinks({ limit: 30 }),
+      trendingLinksHourly({ limit: 30 }),
+    ]);
   },
 });
