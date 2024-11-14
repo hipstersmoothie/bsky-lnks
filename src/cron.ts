@@ -55,7 +55,7 @@ CronJob.from({
     });
 
     const statement = db.prepare(
-      `DELETE FROM cache WHERE key in ${keysToDelete.join(", ")}`
+      `DELETE FROM cache WHERE key in (${keysToDelete.join(", ")})`
     );
 
     console.log("DELETE CACHE", statement.run());
