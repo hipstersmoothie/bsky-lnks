@@ -21,11 +21,11 @@ interface PostWithData extends Post {
 
 export function parseCursor(cursor: string | undefined) {
   if (!cursor) {
-    return { startTime: undefined, url: undefined };
+    return { startTime: undefined, index: undefined };
   }
 
-  const [startTime, ...url] = cursor.split("/");
-  return { startTime, url: url.join("/") };
+  const [startTime, index] = cursor.split("/");
+  return { startTime, index: parseInt(index || "0") };
 }
 
 export type ParsedCursor = ReturnType<typeof parseCursor>;
@@ -95,11 +95,7 @@ export async function rankLinks({
         top[post.url] = [];
       }
 
-      top[post.url]?.push({
-        ...post,
-        uri: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
-        url: `https://bsky.app/profile/${post.did}/post/${post.rkey}`,
-      });
+      top[post.url]?.push(post);
     }
 
     items = Object.entries(top)
@@ -116,17 +112,15 @@ export async function rankLinks({
     );
   }
 
-  const urlCursorIndex = items.findIndex(([url]) => url === cursor.url);
-
-  if (urlCursorIndex !== -1) {
-    items = items.slice(urlCursorIndex + 1);
+  if (cursor.index) {
+    items = items.slice(cursor.index + 1);
   }
 
   items = items.slice(0, limit);
 
   return {
     items: Object.fromEntries(items),
-    cursor: `${startTime}/${items[items.length - 1]![0]}`,
+    cursor: `${startTime}/${(cursor.index || 0) + limit}`,
   };
 }
 
