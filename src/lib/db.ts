@@ -87,6 +87,16 @@ export function addReaction(
   console.log("ADD REACTION", result);
 }
 
+export function getStartTime() {
+  const defaultStartTime = db
+    .prepare(
+      `SELECT datetime(strftime('%s', 'now') - strftime('%s', 'now') % 600, 'unixepoch') AS value;`
+    )
+    .get() as { value: string };
+
+  return defaultStartTime.value;
+}
+
 export function getCurrentTime() {
   const defaultStartTime = db
     .prepare(`SELECT STRFTIME('%Y-%m-%d %H:%M:%S', 'now') AS value;`)

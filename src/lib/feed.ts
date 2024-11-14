@@ -1,4 +1,4 @@
-import { db, getCurrentTime, Post } from "./db.js";
+import { db, getStartTime, Post } from "./db.js";
 
 interface PostWithData extends Post {
   uri: string;
@@ -41,8 +41,9 @@ export async function rankLinks({
   cursor,
   range = "1 day",
 }: RankLinksOptions) {
-  const defaultStartTime = getCurrentTime();
-  const cacheKey = `${cursor.startTime ?? defaultStartTime}/${range}`;
+  const defaultStartTime = getStartTime();
+  const startTime = cursor.startTime ?? defaultStartTime;
+  const cacheKey = `${startTime}/${range}`;
   const cached = db
     .prepare(`SELECT value FROM cache WHERE key = ?`)
     .get(cacheKey) as { value: string } | undefined;
@@ -54,9 +55,8 @@ export async function rankLinks({
     items = JSON.parse(cached.value);
   } else {
     console.log("CACHE MISS", cacheKey);
-    const startTime = cursor.startTime ? `'${cursor.startTime}'` : `'now'`;
-    const minTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime}, '-${range}')`;
-    const maxTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime})`;
+    const minTime = `DATETIME('${startTime}', '-${range}')`;
+    const maxTime = `DATETIME('${startTime}')`;
 
     const posts = db
       .prepare(
@@ -124,11 +124,9 @@ export async function rankLinks({
 
   items = items.slice(0, limit);
 
-  const newStartTime = cursor.startTime || defaultStartTime;
-
   return {
     items: Object.fromEntries(items),
-    cursor: `${newStartTime}/${items[items.length - 1]![0]}`,
+    cursor: `${startTime}/${items[items.length - 1]![0]}`,
   };
 }
 
