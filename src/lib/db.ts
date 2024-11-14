@@ -29,6 +29,7 @@ db.prepare(
     PRIMARY KEY (key)
   )`
 ).run();
+db.prepare(`DELETE FROM cache`).run();
 
 export function addPost(data: Omit<Post, "createdAt">) {
   const result = db

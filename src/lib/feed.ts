@@ -47,18 +47,18 @@ export async function rankLinks({
     .prepare(`SELECT value FROM cache WHERE key = ?`)
     .get(cacheKey) as { value: string } | undefined;
 
-  let posts: PostWithData[];
+  let items: [string, PostWithData[]][];
 
   if (cached) {
     console.log("CACHE HIT", cacheKey);
-    posts = JSON.parse(cached.value);
+    items = JSON.parse(cached.value);
   } else {
     console.log("CACHE MISS", cacheKey);
     const startTime = cursor.startTime ? `'${cursor.startTime}'` : `'now'`;
     const minTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime}, '-${range}')`;
     const maxTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime})`;
 
-    posts = db
+    const posts = db
       .prepare(
         `
           SELECT 
@@ -82,38 +82,39 @@ export async function rankLinks({
       )
       .all() as PostWithData[];
 
+    const top: Record<string, PostWithData[]> = {};
+
+    for (let i = 0; i < posts.length; i++) {
+      const post = posts[i];
+
+      if (!post) {
+        continue;
+      }
+
+      if (!top[post.url]) {
+        top[post.url] = [];
+      }
+
+      top[post.url]?.push({
+        ...post,
+        uri: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
+        url: `https://bsky.app/profile/${post.did}/post/${post.rkey}`,
+      });
+    }
+
+    items = Object.entries(top)
+      .sort((a, b) => sumPostScore(b[1]) - sumPostScore(a[1]))
+      .map(([url, posts]): [string, PostWithData[]] => [
+        url,
+        posts.sort((a, b) => getPostScore(b) - getPostScore(a)),
+      ])
+      .slice(0, 1500);
+
     db.prepare(`INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)`).run(
       cacheKey,
-      JSON.stringify(posts)
+      JSON.stringify(items)
     );
   }
-
-  const top: Record<string, PostWithData[]> = {};
-
-  for (let i = 0; i < posts.length; i++) {
-    const post = posts[i];
-
-    if (!post) {
-      continue;
-    }
-
-    if (!top[post.url]) {
-      top[post.url] = [];
-    }
-
-    top[post.url]?.push({
-      ...post,
-      uri: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
-      url: `https://bsky.app/profile/${post.did}/post/${post.rkey}`,
-    });
-  }
-
-  let items = Object.entries(top)
-    .sort((a, b) => sumPostScore(b[1]) - sumPostScore(a[1]))
-    .map(([url, posts]): [string, PostWithData[]] => [
-      url,
-      posts.sort((a, b) => getPostScore(b) - getPostScore(a)),
-    ]);
 
   const urlCursorIndex = items.findIndex(([url]) => url === cursor.url);
 
