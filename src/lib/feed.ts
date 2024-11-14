@@ -6,7 +6,12 @@ interface PostWithData extends Post {
 }
 
 function getPostScore(post: PostWithData) {
-  return post.likes + post.reposts;
+  // calculate a decaying score based on the last 24 hours
+  // the older the post the lesser the score
+  const timeDiff = Date.now() - post.createdAt.getTime();
+  const decay = 1 - timeDiff / 1000 / 60 / 60 / 24;
+
+  return (post.likes + post.reposts + post.comments) * decay;
 }
 
 function sumPostScore(posts: PostWithData[]) {
