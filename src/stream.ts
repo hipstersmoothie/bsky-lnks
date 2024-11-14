@@ -32,18 +32,24 @@ jetstream.onCreate("app.bsky.feed.post", async (event) => {
   const links = event.commit.record.facets
     ?.map((f) => f.features)
     .flat()
-    .filter((f) => f.$type === "app.bsky.richtext.facet#link")
-    .filter((f) => {
-      try {
-        return !bannedHosts.includes(new URL(f.uri).host);
-      } catch (e) {
-        console.error("URL", f.uri);
-        console.error(e);
-        return false;
-      }
-    });
+    .filter((f) => f.$type === "app.bsky.richtext.facet#link");
 
   if (!links || links.length === 0) {
+    return;
+  }
+
+  const hasBannedHost = links.some((link) => {
+    try {
+      return bannedHosts.includes(new URL(link.uri).host);
+    } catch (e) {
+      console.error("URL", link.uri);
+      console.error(e);
+      return false;
+    }
+  });
+
+  // If the post has a banned host at all, don't add it to the feed
+  if (hasBannedHost) {
     return;
   }
 

@@ -10,6 +10,7 @@ export const bannedHosts = [
   "bsky.app",
   "go.bsky.app",
   "onlyfans.com",
+  "fansly.com",
 ];
 
 export const DID = "did:plc:m2sjv3wncvsasdapla35hzwj";
