@@ -69,6 +69,7 @@ CronJob.from({
   // at 10:00:01 prime the cache
   cronTime: "1 0/10 * * * *",
   onTick: async () => {
+    console.log("Priming the cache....");
     await Promise.all([
       trendingLinks({ limit: 30 }),
       trendingLinksHourly({ limit: 30 }),
