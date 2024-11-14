@@ -19,7 +19,7 @@ export interface Post {
   did: string;
   rkey: string;
   url: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 db.prepare(
@@ -56,7 +56,7 @@ export interface Reaction {
   rkey: string;
   type: "like" | "repost" | "comment";
   url: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 function parseUri(uri: string) {
