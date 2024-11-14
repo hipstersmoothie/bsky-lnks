@@ -1,4 +1,4 @@
-import { db, Post } from "./db.js";
+import { db, getCurrentTime, Post } from "./db.js";
 
 interface PostWithData extends Post {
   uri: string;
@@ -41,33 +41,52 @@ export async function rankLinks({
   cursor,
   range = "1 day",
 }: RankLinksOptions) {
-  const startTime = cursor.startTime ? `'${cursor.startTime}'` : `'now'`;
-  const minTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime}, '-${range}')`;
-  const maxTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime})`;
+  const defaultStartTime = getCurrentTime();
+  const cacheKey = `${cursor.startTime ?? defaultStartTime}/${range}`;
+  const cached = db
+    .prepare(`SELECT value FROM cache WHERE key = ?`)
+    .get(cacheKey) as { value: string } | undefined;
 
-  const posts = db
-    .prepare(
-      `
-        SELECT 
-            post.did,
-            post.rkey,
-            post.url,
-            post.createdAt,
-            COUNT(CASE WHEN reaction.type = 'like' THEN 1 END) AS likes,
-            COUNT(CASE WHEN reaction.type = 'repost' THEN 1 END) AS reposts,
-            COUNT(CASE WHEN reaction.type = 'comment' THEN 1 END) AS comments
-        FROM 
-            post
-            LEFT JOIN reaction ON post.rkey = reaction.rkey AND post.did = reaction.did
-        WHERE
-            post.createdAt >= ${minTime}
-            AND post.createdAt <= ${maxTime}
-            AND (reaction.createdAt >= ${minTime} AND post.createdAt <= ${maxTime} OR reaction.createdAt IS NULL)
-        GROUP BY
-            post.did, post.rkey, post.url, post.createdAt;
-      `
-    )
-    .all() as PostWithData[];
+  let posts: PostWithData[];
+
+  if (cached) {
+    console.log("CACHE HIT", cacheKey);
+    posts = JSON.parse(cached.value);
+  } else {
+    console.log("CACHE MISS", cacheKey);
+    const startTime = cursor.startTime ? `'${cursor.startTime}'` : `'now'`;
+    const minTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime}, '-${range}')`;
+    const maxTime = `STRFTIME('%Y-%m-%d %H:%M:%S', ${startTime})`;
+
+    posts = db
+      .prepare(
+        `
+          SELECT 
+              post.did,
+              post.rkey,
+              post.url,
+              post.createdAt,
+              COUNT(CASE WHEN reaction.type = 'like' THEN 1 END) AS likes,
+              COUNT(CASE WHEN reaction.type = 'repost' THEN 1 END) AS reposts,
+              COUNT(CASE WHEN reaction.type = 'comment' THEN 1 END) AS comments
+          FROM 
+              post
+              LEFT JOIN reaction ON post.rkey = reaction.rkey AND post.did = reaction.did
+          WHERE
+              post.createdAt >= ${minTime}
+              AND post.createdAt <= ${maxTime}
+              AND (reaction.createdAt >= ${minTime} AND post.createdAt <= ${maxTime} OR reaction.createdAt IS NULL)
+          GROUP BY
+              post.did, post.rkey, post.url, post.createdAt;
+        `
+      )
+      .all() as PostWithData[];
+
+    db.prepare(`INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)`).run(
+      cacheKey,
+      JSON.stringify(posts)
+    );
+  }
 
   const top: Record<string, PostWithData[]> = {};
 
@@ -104,10 +123,7 @@ export async function rankLinks({
 
   items = items.slice(0, limit);
 
-  const defaultStartTime = db
-    .prepare(`SELECT STRFTIME('%Y-%m-%d %H:%M:%S', 'now') AS value;`)
-    .get() as { value: string };
-  const newStartTime = cursor.startTime || defaultStartTime.value;
+  const newStartTime = cursor.startTime || defaultStartTime;
 
   return {
     items: Object.fromEntries(items),

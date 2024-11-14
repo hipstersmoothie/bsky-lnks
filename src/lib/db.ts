@@ -22,6 +22,14 @@ export interface Post {
   createdAt: Date;
 }
 
+db.prepare(
+  `CREATE TABLE IF NOT EXISTS cache (
+    key TEXT NOT NULL, 
+    value TEXT NOT NULL, 
+    PRIMARY KEY (key)
+  )`
+).run();
+
 export function addPost(data: Omit<Post, "createdAt">) {
   const result = db
     .prepare(`INSERT OR REPLACE INTO post (did, rkey, url) VALUES (?, ?, ?)`)
@@ -76,4 +84,12 @@ export function addReaction(
     .run(id, data.type, did, rkey);
 
   console.log("ADD REACTION", result);
+}
+
+export function getCurrentTime() {
+  const defaultStartTime = db
+    .prepare(`SELECT STRFTIME('%Y-%m-%d %H:%M:%S', 'now') AS value;`)
+    .get() as { value: string };
+
+  return defaultStartTime.value;
 }
