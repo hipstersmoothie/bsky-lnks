@@ -1,7 +1,6 @@
 import Fastify from "fastify";
 import {
   constructFeed,
-  parseCursor,
   trendingLinks,
   trendingLinksHourly,
 } from "./lib/feed.js";
@@ -56,7 +55,7 @@ server.route({
       limit: string;
     };
     const limit = parseInt(query.limit);
-    const cursor = parseCursor(query.cursor);
+    const cursor = query.cursor ? parseInt(query.cursor) : undefined;
 
     console.log("\nGOT", req.query, "\n");
 

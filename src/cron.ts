@@ -1,6 +1,5 @@
 import { CronJob } from "cron";
-import { db, getCurrentTime } from "./lib/db.js";
-import { trendingLinks, trendingLinksHourly } from "./lib/feed.js";
+import { db } from "./lib/db.js";
 
 // Delete old data
 CronJob.from({
@@ -26,55 +25,5 @@ CronJob.from({
     );
 
     console.log("DELETE REACTIONS", deleteReactions.run());
-  },
-});
-
-// Delete caches older than 6 hours
-CronJob.from({
-  start: true,
-  cronTime: "0/10 * * * *",
-  onTick: () => {
-    const keys = (
-      db.prepare(`SELECT key FROM cache`).all() as { key: string }[]
-    ).map(({ key }) => key);
-    const deleteCutoff = new Date(
-      new Date(getCurrentTime()).getTime() - 1 * 60 * 60 * 1000
-    );
-
-    console.log("DELETE CUTOFF", { deleteCutoff });
-
-    const keysToDelete = keys.filter((key) => {
-      const [startTimeStr] = key.split("/");
-
-      if (!startTimeStr) {
-        return false;
-      }
-
-      const startTime = new Date(startTimeStr);
-
-      return startTime.getTime() <= deleteCutoff.getTime();
-    });
-
-    const statement = db.prepare(
-      `DELETE FROM cache WHERE key in (${keysToDelete
-        .map((k) => `'${k}'`)
-        .join(", ")})`
-    );
-
-    console.log("DELETE CACHE", statement.run());
-  },
-});
-
-// Prime the cache
-CronJob.from({
-  start: true,
-  // at 10:00:01 prime the cache
-  cronTime: "1 0/10 * * * *",
-  onTick: async () => {
-    console.log("Priming the cache....");
-    await Promise.all([
-      trendingLinks({ limit: 30 }),
-      trendingLinksHourly({ limit: 30 }),
-    ]);
   },
 });
