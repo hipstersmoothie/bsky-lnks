@@ -1,15 +1,4 @@
-import { db, Post } from "./db.js";
-
-interface PostWithData extends Post {
-  uri: string;
-  url: string;
-}
-
-interface PostWithData extends Post {
-  likes: number;
-  reposts: number;
-  comments: number;
-}
+import { cacheDb, PostWithData } from "./db.js";
 
 export function parseCursor(cursor: string | undefined) {
   if (!cursor) {
@@ -33,7 +22,7 @@ export async function rankLinks({
   cursor,
   range = "1 day",
 }: RankLinksOptions) {
-  const posts = db
+  const posts = cacheDb
     .prepare(
       `
       SELECT
@@ -41,34 +30,14 @@ export async function rankLinks({
         rkey,
         url,
         createdAt,
-        likes + reposts AS score,
+        score,
         likes,
         reposts,
         comments
       FROM
-        (
-          SELECT
-            post.did,
-            post.rkey,
-            post.url,
-            post.createdAt,
-            COUNT(CASE WHEN reaction.type = 'like' THEN 1 END) AS likes,
-            COUNT(CASE WHEN reaction.type = 'repost' THEN 1 END) AS reposts,
-            COUNT(CASE WHEN reaction.type = 'comment' THEN 1 END) AS comments
-          FROM
-            post
-          LEFT JOIN reaction ON post.rkey = reaction.rkey
-          AND post.did = reaction.did
-          WHERE
-            post.createdAt >= DATETIME(
-              'now',
-              '-${range}'
-            )
-          GROUP BY
-            post.did,
-            post.rkey,
-            post.url
-        )
+        post
+      WHERE
+        createdAt >= DATETIME('now', '-${range}')
       ORDER BY
         score DESC
       LIMIT
