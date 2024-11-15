@@ -1,7 +1,6 @@
 import Fastify from "fastify";
 import {
   constructFeed,
-  parseCursor,
   trendingLinks,
   trendingLinksHourly,
 } from "./lib/feed.js";
@@ -56,7 +55,17 @@ server.route({
       limit: string;
     };
     const limit = parseInt(query.limit);
-    const cursor = parseCursor(query.cursor);
+    let oldCursor = undefined;
+    if (query.cursor && query.cursor.includes("/")) {
+      // We don't need the date anymore, but can grab the index
+      const [, index] = query.cursor.split("/");
+      oldCursor = index;
+    }
+    const cursor = oldCursor
+      ? parseInt(oldCursor)
+      : query.cursor
+      ? parseInt(query.cursor)
+      : 0;
 
     console.log("\nGOT", req.query, "\n");
 
