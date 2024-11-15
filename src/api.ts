@@ -6,6 +6,7 @@ import {
   trendingLinksHourly,
 } from "./lib/feed.js";
 import { DID, HOST } from "./lib/constants.js";
+import { db } from "./lib/db.js";
 
 const server = Fastify({
   logger: true,
@@ -83,6 +84,17 @@ server.route({
         res.code(404).send();
       }
     }
+  },
+});
+
+// Get all the posts data
+server.route({
+  method: "GET",
+  url: "/dump",
+  handler: async (_, res) => {
+    res.send({
+      posts: db.prepare(`SELECT * FROM post`).all(),
+    });
   },
 });
 
