@@ -29,9 +29,20 @@ CronJob.from({
 });
 
 const writeCache = () => {
+  const range = "1 day";
+
   // Delete all old post views from cache
   cacheDb
-    .prepare("DELETE FROM post WHERE dateWritten < DATETIME('now', '-1 day');")
+    .prepare(
+      `DELETE FROM post WHERE dateWritten < DATETIME('now', '-${range}');`
+    )
+    .run();
+
+  // Delete all old dateWritten from cache
+  cacheDb
+    .prepare(
+      `DELETE FROM date_written WHERE dateWritten < DATETIME('now', '-${range}');`
+    )
     .run();
 
   // Write scored posts to cache
@@ -91,7 +102,7 @@ const writeCache = () => {
           LEFT JOIN local.reaction ON local.post.rkey = local.reaction.rkey
           AND local.post.did = local.reaction.did
         WHERE
-          local.post.createdAt >= DATETIME('now', '-1 day')
+          local.post.createdAt >= DATETIME('now', '-${range}')
         GROUP BY
           local.post.did,
           local.post.rkey,
