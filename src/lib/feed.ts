@@ -62,7 +62,7 @@ export async function rankLinks({
 
   return {
     items: posts,
-    cursor: `${posts[posts.length - 1]?.dateWritten || cursor.time}/${
+    cursor: `${cursor.time || posts[posts.length - 1]?.dateWritten}/${
       (cursor.index || 0) + (posts.length === limit ? limit : posts.length)
     }`,
   };
