@@ -28,6 +28,16 @@ export interface Post {
   createdAt: string;
 }
 
+// Create dateWritten table to store each unique dateWritten
+cacheDb
+  .prepare(
+    `CREATE TABLE IF NOT EXISTS date_written (
+    dateWritten DATETIME NOT NULL,
+    PRIMARY KEY (dateWritten)
+  )`
+  )
+  .run();
+
 cacheDb
   .prepare(
     `CREATE TABLE IF NOT EXISTS post (

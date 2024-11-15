@@ -43,9 +43,8 @@ export async function rankLinks({
           SELECT
             dateWritten
           FROM
-            post
+            date_written
           WHERE
-            createdAt >= ${cursorDateTime} AND
             dateWritten >= ${cursorDateTime}
           ORDER BY
             julianday(dateWritten) - julianday('${cursorTime}')

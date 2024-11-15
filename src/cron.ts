@@ -104,7 +104,16 @@ const writeCache = () => {
       `
   );
 
-  console.log("WRITE POSTS", writePosts.run());
+  const lastRun = writePosts.run();
+  cacheDb
+    .prepare(
+      `INSERT INTO date_written (dateWritten)
+      SELECT dateWritten FROM post WHERE rowid = ?;
+      `
+    )
+    .run(lastRun.lastInsertRowid);
+
+  console.log("WRITE POSTS", lastRun);
 };
 
 // write cache immediately at startup
