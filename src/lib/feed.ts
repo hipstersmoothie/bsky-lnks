@@ -2,24 +2,24 @@ import { cacheDb, PostWithData } from "./db.js";
 
 export function parseCursor(cursor: string | undefined) {
   if (!cursor) {
-    return { startTime: undefined, index: undefined };
+    return { time: undefined, index: undefined };
   }
 
-  const [startTime, index] = cursor.split("/");
-  return { startTime, index: parseInt(index || "0") };
+  const [time, index] = cursor.split("/");
+  return { time, index: parseInt(index || "0") };
 }
 
 export type ParsedCursor = ReturnType<typeof parseCursor>;
 
 export interface RankLinksOptions {
   limit: number;
-  cursor?: number;
+  cursor?: ParsedCursor;
   range?: string;
 }
 
 export async function rankLinks({
   limit,
-  cursor,
+  cursor = { time: undefined, index: undefined },
   range = "1 day",
 }: RankLinksOptions) {
   const posts = cacheDb
@@ -30,23 +30,36 @@ export async function rankLinks({
         rkey,
         url,
         createdAt,
-        score
+        score,
+        dateWritten
       FROM
         post
       WHERE
-        createdAt >= DATETIME('now', '-${range}')
+        createdAt >= DATETIME('now', '-${range}') AND
+        dateWritten = (
+          SELECT
+            dateWritten
+          FROM
+            post
+          ORDER BY
+            julianday(dateWritten) - julianday('${cursor.time || "now"}')
+          DESC
+          LIMIT 1
+        )
       ORDER BY
         score DESC
       LIMIT
         ${limit}
-        ${cursor ? `OFFSET ${cursor}` : ""};
+        ${cursor.index ? `OFFSET ${cursor.index}` : ""};
         `
     )
     .all() as PostWithData[];
 
   return {
     items: posts,
-    cursor: (cursor || 0) + limit,
+    cursor: `${cursor.time || posts[posts.length - 1]?.dateWritten}/${
+      (cursor.index || 0) + limit
+    }`,
   };
 }
 

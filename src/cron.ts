@@ -29,8 +29,10 @@ CronJob.from({
 });
 
 const writeCache = () => {
-  // Delete all posts from cache
-  cacheDb.prepare("DELETE FROM post;").run();
+  // Delete all old post views from cache
+  cacheDb
+    .prepare("DELETE FROM post WHERE dateWritten < DATETIME('now', '-1 day');")
+    .run();
 
   // Write scored posts to cache
   const writePosts = cacheDb.prepare(
@@ -45,7 +47,8 @@ const writeCache = () => {
         decay,
         likes,
         reposts,
-        comments
+        comments,
+        dateWritten
       )
       SELECT
         did,
@@ -57,7 +60,8 @@ const writeCache = () => {
         decay,
         likes,
         reposts,
-        comments
+        comments,
+        DATETIME('now') as dateWritten
       FROM
         (
           SELECT
@@ -108,6 +112,6 @@ writeCache();
 
 CronJob.from({
   start: true,
-  cronTime: "*/10 * * * *",
+  cronTime: "0 * * * *",
   onTick: writeCache,
 });

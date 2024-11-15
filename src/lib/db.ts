@@ -40,7 +40,8 @@ cacheDb
       likes INTEGER DEFAULT 0,
       reposts INTEGER DEFAULT 0,
       comments INTEGER DEFAULT 0,
-      PRIMARY KEY (createdAt, score, url, rkey, did)
+      dateWritten DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (dateWritten, createdAt, score, url, rkey, did)
     )`
   )
   .run();
@@ -52,6 +53,7 @@ export interface PostWithData extends Post {
   likes: number;
   reposts: number;
   comments: number;
+  dateWritten: string;
 }
 
 export function addPost(data: Omit<Post, "createdAt">) {
