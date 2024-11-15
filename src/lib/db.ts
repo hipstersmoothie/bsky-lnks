@@ -1,14 +1,15 @@
 import Database from "libsql";
 
-export const db = new Database(process.env.DB_URL || "./local.db");
-export const cacheDb = new Database(process.env.CACHE_DB_URL || "./cache.db");
+const dbPath = process.env.DB_URL || "./local.db";
+const cacheDbPath = process.env.CACHE_DB_URL || "./cache.db";
+
+export const db = new Database(dbPath);
+export const cacheDb = new Database(cacheDbPath);
 
 // Allows the other process to read from the database while we're writing to it
 db.exec("PRAGMA journal_mode = WAL;");
 cacheDb.exec("PRAGMA journal_mode = WAL;");
-cacheDb.exec(
-  `ATTACH DATABASE '${process.env.DB_URL || "./local.db"}' AS local;`
-);
+cacheDb.exec(`ATTACH DATABASE '${dbPath}' AS local;`);
 
 db.prepare(
   `CREATE TABLE IF NOT EXISTS post (
