@@ -1,7 +1,7 @@
 import { CronJob } from "cron";
 import { cacheDb, db } from "./lib/db.js";
 
-// Delete old data
+// Delete old data every hour
 CronJob.from({
   start: true,
   cronTime: "0 * * * *",
@@ -130,8 +130,9 @@ const writeCache = () => {
 // write cache immediately at startup
 writeCache();
 
+// Generate a new feed every 10 minutes
 CronJob.from({
   start: true,
-  cronTime: "0 * * * *",
+  cronTime: "0/10 * * * *",
   onTick: writeCache,
 });
