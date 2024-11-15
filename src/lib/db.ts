@@ -1,3 +1,4 @@
+import { CommitCreateEvent } from "@skyware/jetstream";
 import Database from "libsql";
 
 export const db = new Database(process.env.DB_URL || "./local.db");
@@ -14,6 +15,9 @@ db.prepare(
     PRIMARY KEY (did, rkey, url)
   )`
 ).run();
+try {
+  db.prepare(`ALTER TABLE post ADD COLUMN text TEXT`).run();
+} catch (e) {}
 
 export interface Post {
   did: string;
@@ -31,10 +35,24 @@ db.prepare(
 ).run();
 db.prepare(`DELETE FROM cache`).run();
 
-export function addPost(data: Omit<Post, "createdAt">) {
+export function addPost(data: {
+  event: CommitCreateEvent<"app.bsky.feed.post">;
+  url: string;
+}) {
+  let text = data.event.commit.record.text;
+
+  if (
+    data.event.commit.record.embed &&
+    "external" in data.event.commit.record.embed
+  ) {
+    text += `\n\n${data.event.commit.record.embed.external.title}\n\n${data.event.commit.record.embed.external.description}`;
+  }
+
   const result = db
-    .prepare(`INSERT OR REPLACE INTO post (did, rkey, url) VALUES (?, ?, ?)`)
-    .run(data.did, data.rkey, data.url);
+    .prepare(
+      `INSERT OR REPLACE INTO post (did, rkey, url, text) VALUES (?, ?, ?, ?)`
+    )
+    .run(data.event.did, data.event.commit.rkey, data.url, text);
 
   console.log("ADD POST", result);
 }

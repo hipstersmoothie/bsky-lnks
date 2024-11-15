@@ -54,11 +54,7 @@ jetstream.onCreate("app.bsky.feed.post", async (event) => {
   }
 
   for (const link of links) {
-    addPost({
-      did: event.did,
-      rkey: event.commit.rkey,
-      url: link.uri,
-    });
+    addPost({ event, url: link.uri });
   }
 });
 
