@@ -22,6 +22,9 @@ export async function rankLinks({
   cursor = { time: undefined, index: undefined },
   range = "1 day",
 }: RankLinksOptions) {
+  const cursorTime = cursor.time || "now";
+  const cursorDateTime = `DATETIME('${cursorTime}', '-${range}')`;
+
   const posts = cacheDb
     .prepare(
       `
@@ -35,14 +38,17 @@ export async function rankLinks({
       FROM
         post
       WHERE
-        createdAt >= DATETIME('now', '-${range}') AND
+        createdAt >= ${cursorDateTime} AND
         dateWritten = (
           SELECT
             dateWritten
           FROM
             post
+          WHERE
+            createdAt >= ${cursorDateTime} AND
+            dateWritten >= ${cursorDateTime}
           ORDER BY
-            julianday(dateWritten) - julianday('${cursor.time || "now"}')
+            julianday(dateWritten) - julianday('${cursorTime}')
           DESC
           LIMIT 1
         )
@@ -57,8 +63,8 @@ export async function rankLinks({
 
   return {
     items: posts,
-    cursor: `${cursor.time || posts[posts.length - 1]?.dateWritten}/${
-      (cursor.index || 0) + limit
+    cursor: `${posts[posts.length - 1]?.dateWritten || cursor.time}/${
+      (cursor.index || 0) + (posts.length === limit ? limit : posts.length)
     }`,
   };
 }
