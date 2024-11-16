@@ -57,7 +57,7 @@ server.route({
       limit: string;
     };
     const limit = parseInt(query.limit);
-    const cursor = parseCursor(query.cursor);
+    const cursor = query.cursor ? parseCursor(query.cursor) : undefined;
 
     console.log("\nGOT", req.query, "\n");
 

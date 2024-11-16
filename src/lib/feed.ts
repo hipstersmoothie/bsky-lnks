@@ -1,36 +1,12 @@
-import { db, getStartTime, Post } from "./db.js";
-
-interface PostWithData extends Post {
-  uri: string;
-  url: string;
-}
-
-function getPostScore(post: PostWithData) {
-  // calculate a decaying score based on the last 24 hours
-  // the older the post the lesser the score
-  const timeDiff = Date.now() - new Date(post.createdAt).getTime();
-  const decay = 1 - timeDiff / 1000 / 60 / 60 / 24;
-
-  return (post.likes + post.reposts + post.comments) * decay;
-}
-
-function sumPostScore(posts: PostWithData[]) {
-  return posts.reduce((acc, post) => acc + getPostScore(post), 0);
-}
-
-interface PostWithData extends Post {
-  likes: number;
-  reposts: number;
-  comments: number;
-}
+import { cacheDb, PostWithData } from "./db.js";
 
 export function parseCursor(cursor: string | undefined) {
   if (!cursor) {
-    return { startTime: undefined, index: undefined };
+    return { time: undefined, index: undefined };
   }
 
-  const [startTime, index] = cursor.split("/");
-  return { startTime, index: parseInt(index || "0") };
+  const [time, index] = cursor.split("/");
+  return { time, index: parseInt(index || "0") };
 }
 
 export type ParsedCursor = ReturnType<typeof parseCursor>;
@@ -43,97 +19,57 @@ export interface RankLinksOptions {
 
 export async function rankLinks({
   limit,
-  cursor = { startTime: undefined, index: undefined },
+  cursor = { time: undefined, index: undefined },
   range = "1 day",
 }: RankLinksOptions) {
-  const defaultStartTime = getStartTime();
-  const startTime = cursor.startTime ?? defaultStartTime;
-  const cacheKey = `${startTime}/${range}`;
-  const cached = db
-    .prepare(`SELECT value FROM cache WHERE key = ?`)
-    .get(cacheKey) as { value: string } | undefined;
+  const cursorTime = cursor.time || "now";
+  const cursorDateTime = `DATETIME('${cursorTime}', '-${range}')`;
 
-  let items: [string, PostWithData[]][];
-
-  if (cached) {
-    console.log("CACHE HIT", cacheKey);
-    items = JSON.parse(cached.value);
-  } else {
-    console.log("CACHE MISS", cacheKey);
-    const minTime = `DATETIME('${startTime}', '-${range}')`;
-    const maxTime = `DATETIME('${startTime}')`;
-
-    const posts = db
-      .prepare(
-        `
-          SELECT 
-              post.did,
-              post.rkey,
-              post.url,
-              post.createdAt,
-              COUNT(CASE WHEN reaction.type = 'like' THEN 1 END) AS likes,
-              COUNT(CASE WHEN reaction.type = 'repost' THEN 1 END) AS reposts,
-              COUNT(CASE WHEN reaction.type = 'comment' THEN 1 END) AS comments
-          FROM 
-              post
-              LEFT JOIN reaction ON post.rkey = reaction.rkey AND post.did = reaction.did
-          WHERE
-              post.createdAt >= ${minTime}
-              AND post.createdAt <= ${maxTime}
-              AND (reaction.createdAt >= ${minTime} AND post.createdAt <= ${maxTime} OR reaction.createdAt IS NULL)
-          GROUP BY
-              post.did, post.rkey, post.url, post.createdAt;
-        `
-      )
-      .all() as PostWithData[];
-
-    const top: Record<string, PostWithData[]> = {};
-
-    for (let i = 0; i < posts.length; i++) {
-      const post = posts[i];
-
-      if (!post) {
-        continue;
-      }
-
-      if (!top[post.url]) {
-        top[post.url] = [];
-      }
-
-      top[post.url]?.push(post);
-    }
-
-    items = Object.entries(top)
-      .sort((a, b) => sumPostScore(b[1]) - sumPostScore(a[1]))
-      .map(([url, posts]): [string, PostWithData[]] => [
+  const posts = cacheDb
+    .prepare(
+      `
+      SELECT
+        did,
+        rkey,
         url,
-        posts.sort((a, b) => getPostScore(b) - getPostScore(a)),
-      ])
-      .slice(0, 1500);
-
-    db.prepare(`INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)`).run(
-      cacheKey,
-      JSON.stringify(items)
-    );
-  }
-
-  if (cursor.index) {
-    items = items.slice(cursor.index + 1);
-  }
-
-  items = items.slice(0, limit);
+        createdAt,
+        score,
+        dateWritten
+      FROM
+        post
+      WHERE
+        createdAt >= ${cursorDateTime} AND
+        dateWritten = (
+          SELECT
+            dateWritten
+          FROM
+            date_written
+          WHERE
+            dateWritten >= ${cursorDateTime}
+          ORDER BY
+            julianday(dateWritten) - julianday('${cursorTime}')
+          DESC
+          LIMIT 1
+        )
+      ORDER BY
+        score DESC
+      LIMIT
+        ${limit}
+        ${cursor.index ? `OFFSET ${cursor.index}` : ""};
+        `
+    )
+    .all() as PostWithData[];
 
   return {
-    items: Object.fromEntries(items),
-    cursor: `${startTime}/${(cursor.index || 0) + limit}`,
+    items: posts,
+    cursor: `${cursor.time || posts[posts.length - 1]?.dateWritten}/${
+      (cursor.index || 0) + (posts.length === limit ? limit : posts.length)
+    }`,
   };
 }
 
-export function constructFeed(
-  items: Awaited<ReturnType<typeof rankLinks>>["items"]
-) {
-  return Object.values(items).map((item) => {
-    const post = item[0]!;
+export function constructFeed(items: PostWithData[]) {
+  return items.map((post) => {
     return {
       post: `at://${post.did}/app.bsky.feed.post/${post.rkey}`,
     };
