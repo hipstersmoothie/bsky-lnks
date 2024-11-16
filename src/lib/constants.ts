@@ -13,6 +13,7 @@ export const bannedHosts = [
   "fansly.com",
   "allmylinks.com",
   "vore.us",
+  "uv.club",
 ];
 
 export const DID = "did:plc:m2sjv3wncvsasdapla35hzwj";
