@@ -29,6 +29,8 @@ CronJob.from({
 });
 
 const writeCache = () => {
+  console.log("writing cache");
+
   const range = "1 day";
 
   // Delete all old post views from cache
