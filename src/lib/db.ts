@@ -23,7 +23,9 @@ db.prepare(
 ).run();
 try {
   db.prepare(`ALTER TABLE post ADD COLUMN text TEXT`).run();
-} catch (e) {}
+} catch (e) {
+  console.error(e);
+}
 
 export interface Post {
   did: string;

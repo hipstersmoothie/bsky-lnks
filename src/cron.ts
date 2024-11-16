@@ -32,22 +32,61 @@ const writeCache = () => {
   const range = "1 day";
 
   // Delete all old post views from cache
-  cacheDb
+  const deletePosts = cacheDb
     .prepare(
-      `DELETE FROM post WHERE dateWritten < DATETIME('now', '-${range}');`
+      `DELETE FROM post WHERE dateWritten < DATETIME('now', '-${range}') OR score <= 10;`
     )
     .run();
 
+  console.log("DELETE POSTS", deletePosts);
+
   // Delete all old dateWritten from cache
-  cacheDb
+  const deleteDateWritten = cacheDb
     .prepare(
       `DELETE FROM date_written WHERE dateWritten < DATETIME('now', '-${range}');`
     )
     .run();
 
+  console.log("DELETE DATE WRITTEN", deleteDateWritten);
+
   // Write scored posts to cache
   const writePosts = cacheDb.prepare(
     `
+      WITH post_data AS (
+        SELECT
+          local.post.did,
+          local.post.rkey,
+          local.post.url,
+          local.post.createdAt,
+          (1 - (unixepoch('now') - unixepoch(local.post.createdAt)) * 1.0 / 1000 / 60 / 60 / 24) as decay,
+          COUNT(local.reaction.type) AS raw_score,
+          COUNT(
+            CASE
+              WHEN local.reaction.type = 'like' THEN 1
+            END
+          ) AS likes,
+          COUNT(
+            CASE
+              WHEN local.reaction.type = 'repost' THEN 1
+            END
+          ) AS reposts,
+          COUNT(
+            CASE
+              WHEN local.reaction.type = 'comment' THEN 1
+            END
+          ) AS comments
+        FROM
+          local.post
+        LEFT JOIN local.reaction ON local.post.rkey = local.reaction.rkey
+        AND local.post.did = local.reaction.did
+        WHERE
+          local.post.createdAt >= DATETIME('now', '-${range}')
+        GROUP BY
+          local.post.did,
+          local.post.rkey,
+          local.post.url
+      )
+
       INSERT INTO post (
         did,
         rkey,
@@ -74,40 +113,9 @@ const writeCache = () => {
         comments,
         DATETIME('now') as dateWritten
       FROM
-        (
-          SELECT
-            local.post.did,
-            local.post.rkey,
-            local.post.url,
-            local.post.createdAt,
-            (1 - (unixepoch('now') - unixepoch(local.post.createdAt)) * 1.0 / 1000 / 60 / 60 / 24) as decay,
-            COUNT(local.reaction.type) AS raw_score,
-            COUNT(
-              CASE
-                WHEN local.reaction.type = 'like' THEN 1
-              END
-            ) AS likes,
-            COUNT(
-              CASE
-                WHEN local.reaction.type = 'repost' THEN 1
-              END
-            ) AS reposts,
-            COUNT(
-              CASE
-                WHEN local.reaction.type = 'comment' THEN 1
-              END
-            ) AS comments
-          FROM
-            local.post
-          LEFT JOIN local.reaction ON local.post.rkey = local.reaction.rkey
-          AND local.post.did = local.reaction.did
-        WHERE
-          local.post.createdAt >= DATETIME('now', '-${range}')
-        GROUP BY
-          local.post.did,
-          local.post.rkey,
-          local.post.url
-      )
+        post_data
+      WHERE
+        raw_score > 10.0
       GROUP BY
         url
       ORDER BY
