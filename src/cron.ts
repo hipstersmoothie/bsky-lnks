@@ -127,8 +127,7 @@ const writeCache = () => {
   console.log("WRITE POSTS", lastRun);
 };
 
-// write cache immediately at startup
-writeCache();
+new Promise(() => writeCache());
 
 // Generate a new feed every 10 minutes
 CronJob.from({
