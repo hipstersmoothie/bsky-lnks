@@ -1,13 +1,15 @@
+import "dotenv/config";
 import { CronJob } from "cron";
 import { cacheDb, db } from "./lib/db.js";
+import { dbPath } from "./lib/constants.js";
 
 // Delete old data every hour
 CronJob.from({
   start: true,
   cronTime: "0 * * * *",
-  onTick: () => {
+  onTick: async () => {
     // Delete posts older than 1 day
-    const deletePosts = db.prepare(
+    const deletePosts = await db.prepare(
       `
         DELETE FROM post
         WHERE createdAt < DATETIME('now', '-2 day');
@@ -17,7 +19,7 @@ CronJob.from({
     console.log("DELETE POSTS", deletePosts.run());
 
     // Delete posts older than 1 day
-    const deleteReactions = db.prepare(
+    const deleteReactions = await db.prepare(
       `
         DELETE FROM reaction
         WHERE createdAt < DATETIME('now', '-2 day');
@@ -28,29 +30,31 @@ CronJob.from({
   },
 });
 
-const writeCache = () => {
+const writeCache = async () => {
+  await cacheDb.exec(`ATTACH DATABASE '${dbPath}' AS local;`);
+
   const range = "1 day";
 
   // Delete all old post views from cache
-  const deletePosts = cacheDb
-    .prepare(
+  const deletePosts = (
+    await cacheDb.prepare(
       `DELETE FROM post WHERE dateWritten < DATETIME('now', '-${range}') OR score <= 10;`
     )
-    .run();
+  ).run();
 
   console.log("DELETE POSTS", deletePosts);
 
   // Delete all old dateWritten from cache
-  const deleteDateWritten = cacheDb
-    .prepare(
+  const deleteDateWritten = (
+    await cacheDb.prepare(
       `DELETE FROM date_written WHERE dateWritten < DATETIME('now', '-${range}');`
     )
-    .run();
+  ).run();
 
   console.log("DELETE DATE WRITTEN", deleteDateWritten);
 
   // Write scored posts to cache
-  const writePosts = cacheDb.prepare(
+  const writePosts = await cacheDb.prepare(
     `
       WITH post_data AS (
         SELECT
@@ -124,18 +128,19 @@ const writeCache = () => {
   );
 
   const lastRun = writePosts.run();
-  cacheDb
-    .prepare(
+
+  (
+    await cacheDb.prepare(
       `INSERT INTO date_written (dateWritten)
       SELECT dateWritten FROM post WHERE rowid = ?;
       `
     )
-    .run(lastRun.lastInsertRowid);
+  ).run(lastRun.lastInsertRowid);
 
   console.log("WRITE POSTS", lastRun);
 };
 
-new Promise(() => writeCache());
+await writeCache();
 
 // Generate a new feed every 10 minutes
 CronJob.from({
