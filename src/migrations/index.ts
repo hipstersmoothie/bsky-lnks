@@ -1,8 +1,10 @@
 import { db, cacheDb } from "../lib/db.js";
 import { migration as migration001, rollback as rollback001 } from "./001.js";
+import { migration as migration002, rollback as rollback002 } from "./002.js";
 
 export const migrations = [
   migration001,
+  migration002,
   // more migrations here
 ];
 const runMigrations = async () => {
@@ -13,6 +15,7 @@ const runMigrations = async () => {
 
 const rollbacks = [
   rollback001,
+  rollback002,
   // more rollbacks here
 ];
 const rollbackMigrations = async () => {
