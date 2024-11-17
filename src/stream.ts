@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { URL } from "url";
 import { Jetstream } from "@skyware/jetstream";
 import WebSocket from "ws";

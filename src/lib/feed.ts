@@ -25,8 +25,8 @@ export async function rankLinks({
   const cursorTime = cursor.time || "now";
   const cursorDateTime = `DATETIME('${cursorTime}', '-${range}')`;
 
-  const posts = cacheDb
-    .prepare(
+  const posts = (await (
+    await cacheDb.prepare(
       `
       SELECT
         did,
@@ -58,7 +58,7 @@ export async function rankLinks({
         ${cursor.index ? `OFFSET ${cursor.index}` : ""};
         `
     )
-    .all() as PostWithData[];
+  ).all()) as PostWithData[];
 
   return {
     items: posts,

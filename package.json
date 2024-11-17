@@ -4,8 +4,10 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "tsx src/entry.ts",
-    "lint": "eslint ."
+    "start": "concurrently \"tsx src/entry.ts\" \"tsx src/stream.ts\" \"tsx src/cron.ts\"",
+    "lint": "eslint .",
+    "db:migrate": "tsx src/migrations/index.ts",
+    "db:rollback": "tsx src/migrations/index.ts --rollback"
   },
   "keywords": [],
   "author": "Andrew Lisowski",
@@ -27,6 +29,7 @@
     "@eslint/js": "^9.14.0",
     "@types/node": "^22.9.0",
     "@types/ws": "^8.5.13",
+    "concurrently": "^9.1.0",
     "eslint": "^9.14.0",
     "globals": "^15.12.0",
     "inquirer": "^12.1.0",

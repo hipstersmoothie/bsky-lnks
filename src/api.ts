@@ -93,7 +93,7 @@ server.route({
   url: "/dump",
   handler: async (_, res) => {
     res.send({
-      posts: db.prepare(`SELECT * FROM post`).all(),
+      posts: await (await db.prepare(`SELECT * FROM post`)).all(),
     });
   },
 });
