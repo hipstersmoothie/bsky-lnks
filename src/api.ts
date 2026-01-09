@@ -5,7 +5,7 @@ import {
   trendingLinks,
   trendingLinksHourly,
 } from "./lib/feed.js";
-import { DID, HOST } from "./lib/constants.js";
+import { PUBLISHER_DID, HOST, SERVICE_DID } from "./lib/constants.js";
 import { db } from "./lib/db.js";
 
 const server = Fastify({
@@ -19,7 +19,7 @@ server.route({
   handler: async (_, res) => {
     res.send({
       "@context": ["https://www.w3.org/ns/did/v1"],
-      id: DID,
+      id: SERVICE_DID,
       service: [
         {
           id: "#bsky_fg",
@@ -37,10 +37,10 @@ server.route({
   url: "/xrpc/app.bsky.feed.describeFeedGenerator",
   handler: async (_, res) => {
     res.send({
-      did: DID,
+      did: SERVICE_DID,
       feeds: [
-        { uri: `at://${DID}/app.bsky.feed.generator/trending-links` },
-        { uri: `at://${DID}/app.bsky.feed.generator/trend-links-24` },
+        { uri: `at://${PUBLISHER_DID}/app.bsky.feed.generator/trending-links` },
+        { uri: `at://${PUBLISHER_DID}/app.bsky.feed.generator/trend-links-24` },
       ],
     });
   },
@@ -62,7 +62,7 @@ server.route({
     console.log("\nGOT", req.query, "\n");
 
     switch (query.feed) {
-      case `at://${DID}/app.bsky.feed.generator/trending-links`: {
+      case `at://${PUBLISHER_DID}/app.bsky.feed.generator/trending-links`: {
         const { items, cursor: newCursor } = await trendingLinks({
           limit,
           cursor,
@@ -71,7 +71,7 @@ server.route({
         res.send({ feed: constructFeed(items), cursor: newCursor });
         return;
       }
-      case `at://${DID}/app.bsky.feed.generator/trend-links-24`: {
+      case `at://${PUBLISHER_DID}/app.bsky.feed.generator/trend-links-24`: {
         const { items, cursor: newCursor } = await trendingLinksHourly({
           limit,
           cursor,

@@ -16,5 +16,6 @@ export const bannedHosts = [
   "uv.club",
 ];
 
-export const DID = "did:plc:m2sjv3wncvsasdapla35hzwj";
+export const PUBLISHER_DID = "did:plc:m2sjv3wncvsasdapla35hzwj";
 export const HOST = "bsky-lnks-production.up.railway.app";
+export const SERVICE_DID = `did:web:${HOST}`;
